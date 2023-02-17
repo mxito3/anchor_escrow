@@ -33,6 +33,7 @@ pub mod escrow {
         taker_amount: u64,
     ) -> Result<()> {
         ctx.accounts.escrow_account.initializer_key = *ctx.accounts.initializer.key;
+//a
         ctx.accounts
             .escrow_account
             .initializer_deposit_token_account = *ctx
@@ -40,6 +41,7 @@ pub mod escrow {
             .initializer_deposit_token_account
             .to_account_info()
             .key;
+//b
         ctx.accounts
             .escrow_account
             .initializer_receive_token_account = *ctx
@@ -47,10 +49,19 @@ pub mod escrow {
             .initializer_receive_token_account
             .to_account_info()
             .key;
+        //500
         ctx.accounts.escrow_account.initializer_amount = initializer_amount;
+        //1000
         ctx.accounts.escrow_account.taker_amount = taker_amount;
 
+        // ctx.program_id Currently executing program id.
+
         let (pda, _bump_seed) = Pubkey::find_program_address(&[ESCROW_PDA_SEED], ctx.program_id);
+
+        //所有权限都给PDA
+        //sender a b escrow token 
+        //escrow存储合约数据，变量存在这里
+        //不传代币的合约地址，因为用户持有的所有代币都在data里面，只需要申请owner的所有权限就可以改数据
         token::set_authority(ctx.accounts.into(), AuthorityType::AccountOwner, Some(pda))?;
         Ok(())
     }
@@ -59,6 +70,7 @@ pub mod escrow {
         let (_pda, bump_seed) = Pubkey::find_program_address(&[ESCROW_PDA_SEED], ctx.program_id);
         let seeds = &[&ESCROW_PDA_SEED[..], &[bump_seed]];
 
+        //pda,escrow,program
         token::set_authority(
             ctx.accounts
                 .into_set_authority_context()
@@ -75,6 +87,8 @@ pub mod escrow {
         let (_pda, bump_seed) = Pubkey::find_program_address(&[ESCROW_PDA_SEED], ctx.program_id);
         let seeds = &[&ESCROW_PDA_SEED[..], &[bump_seed]];
 
+        //from :pda_deposit_token_account, initializerTokenAccountA 持有500A
+        //to self.taker_receive_token_account.  takerTokenAccountA
         token::transfer(
             ctx.accounts
                 .into_transfer_to_taker_context()
@@ -82,11 +96,15 @@ pub mod escrow {
             ctx.accounts.escrow_account.initializer_amount,
         )?;
 
+        
+        //from takerTokenAccountB
+        //to initializerTokenAccountB
         token::transfer(
             ctx.accounts.into_transfer_to_initializer_context(),
             ctx.accounts.escrow_account.taker_amount,
         )?;
-
+        
+        //给owner转回权限
         token::set_authority(
             ctx.accounts
                 .into_set_authority_context()
